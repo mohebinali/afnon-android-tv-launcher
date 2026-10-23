@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write          # the release step needs this; it is not granted by default
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,19 +20,37 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # No setup-android action: the runner image already has the SDK at $ANDROID_HOME.
+      - name: Show the SDK the runner gave us
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls "$ANDROID_HOME/platforms" 2>/dev/null || echo "(no platforms dir)"
+          ls "$ANDROID_HOME/build-tools" 2>/dev/null || echo "(no build-tools dir)"
+          java -version
 
-      - name: Fetch adhan audio
-        run: bash tools/fetch-adhans.sh || echo "adhan fetch skipped; app builds without the clips"
+      - name: Make sure SDK 34 is present
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SDKM" ]; then
+            yes | "$SDKM" --licenses >/dev/null 2>&1 || true
+            "$SDKM" "platforms;android-34" "build-tools;34.0.0" || true
+          else
+            echo "sdkmanager not at $SDKM — relying on the preinstalled SDK"
+          fi
+
+      - name: Fetch adhan audio (non-fatal)
+        run: bash tools/fetch-adhans.sh || echo "adhan fetch skipped; the app builds without the clips"
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Name the APK
+      - name: Collect the APK
         run: |
           mkdir -p out
-          cp "$(find app/build/outputs/apk/debug -name '*.apk' | head -1)" out/afnon-dammam.apk
+          APK="$(find app/build/outputs/apk/debug -name '*.apk' | head -1)"
+          echo "built: $APK"
+          cp "$APK" out/afnon-dammam.apk
           ls -la out/
 
       - name: Upload artifact
@@ -45,6 +66,3 @@ jobs:
           tag_name: dammam-${{ github.run_number }}
           name: Afnon Dammam build ${{ github.run_number }}
           files: out/afnon-dammam.apk
-          generate_release_notes: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
