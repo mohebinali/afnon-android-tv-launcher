@@ -54,7 +54,10 @@ public class MainActivity extends Screen {
     // Section labels sit 10px above the design (478 / 722) so the focus ring and 1.06 scale never touch them.
     private static final int LABEL_ABOVE_FAV = 468, LABEL_ABOVE_MORE = 712;
 
-    private static final int ARCH = 0, WIFI = 1, SETTINGS = 2, F0 = 3, M0 = 7, ALL = 12, RADIO = 13, NODES = 14;
+    private static final int ARCH = 0, WIFI = 1, SETTINGS = 2, F0 = 3, M0 = 7, ALL = 12, RADIO = 13, THEME = 14, NODES = 15;
+
+    /** The other home: CleanYourTV's launcher, installed alongside as the "normal" theme. */
+    private static final String NORMAL_HOME = "com.gathin.tvhome";
 
     private final View[] nodes = new View[NODES];
     private final TextView[] cellTag = new TextView[6], cellName = new TextView[6], cellTime = new TextView[6];
@@ -219,7 +222,8 @@ public class MainActivity extends Screen {
         LinearLayout pills = new LinearLayout(this);
         pills.setClipChildren(false);
         float reach = FocusTile.REACH;
-        // Radio pill removed: the node is still built so its updaters stay safe, but it is never shown.
+        nodes[THEME] = themePill();
+        pills.addView(nodes[THEME], new LinearLayout.LayoutParams(-2, Ui.ipx(72 + 2 * reach)));
         LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(-2, Ui.ipx(72 + 2 * reach));
         wlp.setMarginStart(Ui.ipx(20 - 2 * reach));
         pills.addView(nodes[WIFI], wlp);
@@ -308,6 +312,38 @@ public class MainActivity extends Screen {
         b.setOnClickListener(v -> startActivity(new Intent(this, PrayerDayActivity.class)));
         nodeLabel[ARCH] = t.today();
         placeTile(b, 176, 904, 440, 72);
+        return b;
+    }
+
+    /**
+     * Switches the look: opens CleanYourTV's launcher, the "normal" theme, if it is installed.
+     * Android gives an app no way to change the system's default home, so this changes what you
+     * are looking at; the HOME key still goes to whichever launcher is set as default.
+     */
+    private View themePill() {
+        FocusTile b = new FocusTile(this, 36);
+        b.setRest(Tokens.LAPIS_800, Tokens.LINE_SOFT, 2);
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(Ui.ipx(28), 0, Ui.ipx(28), 0);
+        Icon icon = new Icon(this, Icon.STAR, 2f);
+        TextView label = text(ui400, 24, Tokens.PLASTER_100);
+        label.setText(t.theme());
+        row.addView(icon, new LinearLayout.LayoutParams(Ui.ipx(30), Ui.ipx(30)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+        lp.setMarginStart(Ui.ipx(14));
+        row.addView(label, lp);
+        b.addView(row, new FrameLayout.LayoutParams(-2, -1));
+        b.setLook(f -> {
+            int c = f ? Tokens.LAPIS_900 : Tokens.PLASTER_100;
+            label.setTextColor(c);
+            icon.setColor(c);
+        });
+        b.setOnClickListener(v -> {
+            Intent i = getPackageManager().getLaunchIntentForPackage(NORMAL_HOME);
+            if (i != null) startSafely(i);   // not installed yet: the button simply rests
+        });
+        nodeLabel[THEME] = t.theme();
         return b;
     }
 
@@ -848,16 +884,17 @@ public class MainActivity extends Screen {
         boolean up = key == KeyEvent.KEYCODE_DPAD_UP, down = key == KeyEvent.KEYCODE_DPAD_DOWN;
         int to = -1;
         switch (from) {
-            case ARCH: to = right ? F0 : up ? WIFI : -1; break;
+            case ARCH: to = right ? F0 : up ? THEME : -1; break;
             case RADIO: to = left ? ARCH : right ? WIFI : down ? F0 + 1 : -1; break;
-            case WIFI: to = left ? ARCH : right ? SETTINGS : down ? F0 + 2 : -1; break;
+            case THEME: to = left ? ARCH : right ? WIFI : down ? F0 + 1 : -1; break;
+            case WIFI: to = left ? THEME : right ? SETTINGS : down ? F0 + 2 : -1; break;
             case SETTINGS: to = left ? WIFI : down ? F0 + 3 : -1; break;
             default:
                 if (from >= F0 && from < M0) {
                     int i = from - F0;
                     if (left) to = i == 0 ? ARCH : from - 1;
                     else if (right) to = i == 3 ? -1 : from + 1;
-                    else if (up) to = i == 3 ? SETTINGS : WIFI;
+                    else if (up) to = i == 3 ? SETTINGS : i == 2 ? WIFI : THEME;
                     else to = M0 + new int[] {0, 1, 3, 4}[i];
                 } else {
                     int i = from - M0;
