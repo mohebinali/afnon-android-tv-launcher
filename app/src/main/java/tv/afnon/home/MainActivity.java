@@ -219,7 +219,7 @@ public class MainActivity extends Screen {
         LinearLayout pills = new LinearLayout(this);
         pills.setClipChildren(false);
         float reach = FocusTile.REACH;
-        pills.addView(nodes[RADIO], new LinearLayout.LayoutParams(-2, Ui.ipx(72 + 2 * reach)));
+        // Radio pill removed: the node is still built so its updaters stay safe, but it is never shown.
         LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(-2, Ui.ipx(72 + 2 * reach));
         wlp.setMarginStart(Ui.ipx(20 - 2 * reach));
         pills.addView(nodes[WIFI], wlp);
@@ -690,7 +690,7 @@ public class MainActivity extends Screen {
         root.removeView(radioCard);
         radioCard = null;
         for (View n : nodes) if (n != null) n.setFocusable(true);
-        if (focusPill) nodes[RADIO].requestFocus();
+        if (focusPill) nodes[WIFI].requestFocus();
     }
 
     // ---------------------------------------------------------------- reminder card
@@ -848,16 +848,16 @@ public class MainActivity extends Screen {
         boolean up = key == KeyEvent.KEYCODE_DPAD_UP, down = key == KeyEvent.KEYCODE_DPAD_DOWN;
         int to = -1;
         switch (from) {
-            case ARCH: to = right ? F0 : up ? RADIO : -1; break;
+            case ARCH: to = right ? F0 : up ? WIFI : -1; break;
             case RADIO: to = left ? ARCH : right ? WIFI : down ? F0 + 1 : -1; break;
-            case WIFI: to = left ? RADIO : right ? SETTINGS : down ? F0 + 2 : -1; break;
+            case WIFI: to = left ? ARCH : right ? SETTINGS : down ? F0 + 2 : -1; break;
             case SETTINGS: to = left ? WIFI : down ? F0 + 3 : -1; break;
             default:
                 if (from >= F0 && from < M0) {
                     int i = from - F0;
                     if (left) to = i == 0 ? ARCH : from - 1;
                     else if (right) to = i == 3 ? -1 : from + 1;
-                    else if (up) to = i == 3 ? SETTINGS : i == 2 ? WIFI : RADIO;
+                    else if (up) to = i == 3 ? SETTINGS : WIFI;
                     else to = M0 + new int[] {0, 1, 3, 4}[i];
                 } else {
                     int i = from - M0;
