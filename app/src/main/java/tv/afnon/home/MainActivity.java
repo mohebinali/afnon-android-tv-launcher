@@ -61,7 +61,7 @@ public class MainActivity extends Screen {
     private final View[] cell = new View[6];
     private final String[] nodeLabel = new String[NODES];
 
-    private TextView clock, gdate, hdate, wifiName;
+    private TextView clock, gdate, hdate, wifiName, wx;
     private LinearLayout hints;
     private PrayerDay day;
     private long lastMinute = -1;
@@ -204,6 +204,11 @@ public class MainActivity extends Screen {
         when.addView(gdate);
         ((LinearLayout.LayoutParams) hdate.getLayoutParams()).topMargin = Ui.ipx(6);
         ((LinearLayout.LayoutParams) gdate.getLayoutParams()).topMargin = Ui.ipx(6);
+        // The weather for the same city the prayer times use, in the mist of the Gregorian date.
+        wx = text(ui400, 24, Tokens.MIST_400);
+        wx.setTextDirection(rtl ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+        when.addView(wx);
+        ((LinearLayout.LayoutParams) wx.getLayoutParams()).topMargin = Ui.ipx(6);
         lineHeight(clock, 1f);
         when.setClipChildren(false);
         place(when, Tokens.COURT_X, 56, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -426,6 +431,10 @@ public class MainActivity extends Screen {
         clock.setText(time(now, 0.4f));
         gdate.setText(gregorian(now));
         hdate.setText(hijri(day) + t.sep() + t.city());
+        if (wx != null) {
+            wx.setText(Weather.line(this, t));
+            Weather.refresh(this, () -> { if (wx != null) wx.setText(Weather.line(this, t)); });
+        }
 
         String[] names = t.prayerNames();
         if (day.friday) names[PrayerDay.DHUHR] = t.jumuah();
